@@ -1,0 +1,3 @@
+rootProject.name='ViewDistributor'
+include ':app'
+include ':viewdistributor'
