@@ -24,10 +24,10 @@ class ViewDistributor @JvmOverloads constructor(
 
     private val mPlacedPoints = mutableListOf<PointF>()
 
-    var mIterations = 200
-    var mScale = 1f
-    var mMinAngle = 0f
-    var mMaxAngle = 0f
+    var iterations = 200
+    var scale = 1f
+    var minAngle = 0f
+    var maxAngle = 0f
     private var mRotationStyle = "random" // position or random
 
     private var mLayoutLeft = 0
@@ -36,10 +36,10 @@ class ViewDistributor @JvmOverloads constructor(
     init {
         context.obtainStyledAttributes(attrs, R.styleable.ViewDistributor, 0, 0).apply {
             try {
-                getFloat(R.styleable.ViewDistributor_drawAreaScale, 1f).let { mScale = it }
-                getFloat(R.styleable.ViewDistributor_minAngle, 0f).let { mMinAngle = it }
-                getFloat(R.styleable.ViewDistributor_maxAngle, 0f).let { mMaxAngle = it }
-                getInt(R.styleable.ViewDistributor_iterations, 200).let { mIterations = it }
+                getFloat(R.styleable.ViewDistributor_drawAreaScale, 1f).let { scale = it }
+                getFloat(R.styleable.ViewDistributor_minAngle, 0f).let { minAngle = it }
+                getFloat(R.styleable.ViewDistributor_maxAngle, 0f).let { maxAngle = it }
+                getInt(R.styleable.ViewDistributor_iterations, 200).let { iterations = it }
                 getString(R.styleable.ViewDistributor_rotationStyle)?.let { mRotationStyle = it }
 
             } finally {
@@ -50,7 +50,7 @@ class ViewDistributor @JvmOverloads constructor(
 
     override fun onSizeChanged(width: Int, height: Int, oldWidth: Int, oldHeight: Int) {
         super.onSizeChanged(width, height, oldWidth, oldHeight)
-        updateDrawRegions(width, height, mScale)
+        updateDrawRegions(width, height, scale)
     }
 
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) { // TODO: Animate by redrawing?
@@ -70,9 +70,9 @@ class ViewDistributor @JvmOverloads constructor(
                 mPlacedPoints.add(bestCandidate)
 
                 val rotation = if (mRotationStyle == "position") {
-                    scale(bestCandidate.x, mLayoutLeft.toFloat(), mLayoutRight.toFloat(), mMinAngle, mMaxAngle)
+                    scale(bestCandidate.x, mLayoutLeft.toFloat(), mLayoutRight.toFloat(), minAngle, maxAngle)
                 } else {
-                    randomFloat(mMinAngle, mMaxAngle)
+                    randomFloat(minAngle, maxAngle)
                 }
 
                 var height = view.layoutParams.height
@@ -165,7 +165,7 @@ class ViewDistributor @JvmOverloads constructor(
         var bestCandidate: PointF? = null
         var bestDistance = 0f
 
-        for (i in 0 until mIterations) {
+        for (i in 0 until iterations) {
 
             val candidate = randomPoint()
             val closest = findClosest(candidate)
@@ -187,8 +187,7 @@ class ViewDistributor @JvmOverloads constructor(
         return PointF(x, y)
     }
 
-    // https://bost.ocks.org/mike/algorithms/
-    private fun findClosest(point: PointF): PointF? { // TODO: Use quad-tree (see link above)
+    private fun findClosest(point: PointF): PointF? {
 
         var closest: PointF? = null
         var closestDistance = Float.MAX_VALUE
@@ -259,6 +258,14 @@ class ViewDistributor @JvmOverloads constructor(
 
     fun removeAvoidRegion(rectF: RectF) {
         mAvoidRegions.remove(rectF)
+    }
+
+    fun setRandomRotationStyle() {
+        mRotationStyle = "random"
+    }
+
+    fun setPositionRotationStyle() {
+        mRotationStyle = "position"
     }
 
     companion object {
