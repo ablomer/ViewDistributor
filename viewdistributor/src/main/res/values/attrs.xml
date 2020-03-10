@@ -2,7 +2,7 @@
 <resources>
 
     <declare-styleable name="ViewDistributor">
-        <attr name="scale" format="float" />
+        <attr name="drawAreaScale" format="float" />
         <attr name="minAngle" format="float" />
         <attr name="maxAngle" format="float" />
         <attr name="iterations" format="integer" />

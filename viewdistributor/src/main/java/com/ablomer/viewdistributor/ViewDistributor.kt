@@ -33,7 +33,7 @@ class ViewDistributor @JvmOverloads constructor(
     init {
         context.obtainStyledAttributes(attrs, R.styleable.ViewDistributor, 0, 0).apply {
             try {
-                getFloat(R.styleable.ViewDistributor_scale, 1f).let { mScale = it }
+                getFloat(R.styleable.ViewDistributor_drawAreaScale, 1f).let { mScale = it }
                 getFloat(R.styleable.ViewDistributor_minAngle, 0f).let { mMinAngle = it }
                 getFloat(R.styleable.ViewDistributor_maxAngle, 0f).let { mMaxAngle = it }
                 getInt(R.styleable.ViewDistributor_iterations, 200).let { mIterations = it }
@@ -67,14 +67,25 @@ class ViewDistributor @JvmOverloads constructor(
                     randomFloat(mMinAngle, mMaxAngle)
                 }
 
-                view.measure(width, height) // Sets measured width and height
+                var height = view.layoutParams.height
+                var width = view.layoutParams.width
+
+                view.measure(width, height)
+
+                if (height < 0) {
+                    height = view.measuredHeight
+                }
+
+                if (width < 0) {
+                    width = view.measuredWidth
+                }
 
                 setChildFrame(
                     view,
                     bestCandidate.x.toInt(),
                     bestCandidate.y.toInt(),
-                    view.measuredWidth,
-                    view.measuredHeight,
+                    width,
+                    height,
                     rotation
                 )
             }

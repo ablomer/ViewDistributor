@@ -10,41 +10,53 @@
     <com.ablomer.viewdistributor.ViewDistributor
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:scale="0.8"
-        app:minAngle="-90"
-        app:maxAngle="90"
-        app:rotationStyle="position"
+        app:drawAreaScale="0.85"
+        app:minAngle="-45"
+        app:maxAngle="45"
+        app:rotationStyle="random"
         app:iterations="200">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="1"
-            android:textSize="48sp" />
+        <ImageView
+            android:layout_width="128dp"
+            android:layout_height="128dp"
+            android:src="@drawable/emoticon_excited_outline"
+            android:tint="#e91e63" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="2"
-            android:textSize="48sp" />
+        <ImageView
+            android:layout_width="128dp"
+            android:layout_height="128dp"
+            android:src="@drawable/emoticon_happy_outline"
+            android:tint="#9c27b0" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="3"
-            android:textSize="48sp" />
+        <ImageView
+            android:layout_width="128dp"
+            android:layout_height="128dp"
+            android:src="@drawable/emoticon_neutral_outline"
+            android:tint="#673ab7" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="4"
-            android:textSize="48sp" />
+        <ImageView
+            android:layout_width="128dp"
+            android:layout_height="128dp"
+            android:src="@drawable/emoticon_outline"
+            android:tint="#3f51b5" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="5"
-            android:textSize="48sp" />
+        <ImageView
+            android:layout_width="128dp"
+            android:layout_height="128dp"
+            android:src="@drawable/emoticon_tongue_outline"
+            android:tint="#2196f3" />
+
+        <ImageView
+            android:layout_width="128dp"
+            android:layout_height="128dp"
+            android:src="@drawable/emoticon_wink_outline"
+            android:tint="#03a9f4" />
+
+        <ImageView
+            android:layout_width="128dp"
+            android:layout_height="128dp"
+            android:src="@drawable/emoticon_cool_outline"
+            android:tint="#00bcd4" />
 
     </com.ablomer.viewdistributor.ViewDistributor>
 
