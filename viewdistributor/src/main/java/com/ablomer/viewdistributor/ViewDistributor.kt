@@ -30,6 +30,9 @@ class ViewDistributor @JvmOverloads constructor(
     var mMaxAngle = 0f
     private var mRotationStyle = "random" // position or random
 
+    private var mLayoutLeft = 0
+    private var mLayoutRight = 0
+
     init {
         context.obtainStyledAttributes(attrs, R.styleable.ViewDistributor, 0, 0).apply {
             try {
@@ -51,7 +54,12 @@ class ViewDistributor @JvmOverloads constructor(
     }
 
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) { // TODO: Animate by redrawing?
+        mLayoutLeft = l
+        mLayoutRight = r
+        shuffle()
+    }
 
+    fun shuffle() {
         mPlacedPoints.clear()
 
         for (i in 0 until childCount) {
@@ -62,7 +70,7 @@ class ViewDistributor @JvmOverloads constructor(
                 mPlacedPoints.add(bestCandidate)
 
                 val rotation = if (mRotationStyle == "position") {
-                    scale(bestCandidate.x, l.toFloat(), r.toFloat(), mMinAngle, mMaxAngle)
+                    scale(bestCandidate.x, mLayoutLeft.toFloat(), mLayoutRight.toFloat(), mMinAngle, mMaxAngle)
                 } else {
                     randomFloat(mMinAngle, mMaxAngle)
                 }
@@ -255,7 +263,14 @@ class ViewDistributor @JvmOverloads constructor(
 
     companion object {
 
-        private fun scale(rect: RectF, factor: Float): RectF {
+        fun viewToRegion(view: View): RectF {
+            val location = FloatArray(2)
+            location[0] = view.x
+            location[1] = view.y
+            return RectF(location[0], location[1], location[0] + view.width, location[1] + view.height)
+        }
+
+        fun scale(rect: RectF, factor: Float): RectF {
             val diffHorizontal = rect.width() * (factor - 1)
             val diffVertical = rect.height() * (factor - 1)
 
@@ -265,7 +280,7 @@ class ViewDistributor @JvmOverloads constructor(
             )
         }
 
-        private fun scale(rect: Rect, factor: Float): RectF {
+        fun scale(rect: Rect, factor: Float): RectF {
             return scale(RectF(rect), factor)
         }
     }
