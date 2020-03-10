@@ -3,11 +3,9 @@ package com.ablomer.vddemo
 import android.animation.Animator
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.view.animation.Animation
 import android.widget.Button
-import androidx.core.animation.doOnEnd
+import androidx.appcompat.app.AppCompatActivity
 import com.ablomer.viewdistributor.ViewDistributor
 
 class MainActivity : AppCompatActivity() {
