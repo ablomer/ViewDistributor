@@ -9,7 +9,12 @@
 
     <com.ablomer.viewdistributor.ViewDistributor
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        app:scale="0.8"
+        app:minAngle="-90"
+        app:maxAngle="90"
+        app:rotationStyle="position"
+        app:iterations="200">
 
         <TextView
             android:layout_width="wrap_content"

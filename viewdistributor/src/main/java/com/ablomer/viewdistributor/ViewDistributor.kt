@@ -5,7 +5,6 @@ import android.graphics.PointF
 import android.graphics.Rect
 import android.graphics.RectF
 import android.util.AttributeSet
-import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import java.util.*
@@ -18,45 +17,27 @@ class ViewDistributor @JvmOverloads constructor(
 
 ) : ViewGroup(context, attrs, defStyleAttr) {
 
-    private var mAvoids = mutableListOf<RectF>()
-
-    private val mPlacedPoints = mutableListOf<PointF>()
-    private val mDrawRegions = mutableListOf<RectF>()
-
     private val mRandom = Random()
 
-    private val mMaxRetries = 200 // TODO: What does this do?
-    private var mPadding = 1f
-    private var mMinAngle = 0
-    private var mMaxAngle = 0
+    private val mDrawRegions = mutableListOf<RectF>()
+    private var mAvoidRegions = mutableListOf<RectF>()
 
-    // https://android.googlesource.com/platform/frameworks/base/+/master/core/java/android/widget/LinearLayout.java
+    private val mPlacedPoints = mutableListOf<PointF>()
 
-    /*
-    ViewDistributor(rlLoginBackground)
-        .minAngle(-15)
-        .maxAngle(15)
-        .avoid(rlLoginLogo) // TODO: Do each individual element individually
-        .boundPadding(0.9f) // <1 shrinks
-        .avoidPadding(1.2f)
-        .onRandomizeComplete(object : OnRandomizeComplete() {
-            override fun onRandomizeComplete(
-                view: View?,
-                x: Float,
-                y: Float,
-                r: Float
-            ) {
-                view?.x = x
-                view?.y = y
-                view?.rotation = r
-            }
-        }).randomize()
-     */
+    var mIterations = 200
+    var mScale = 1f
+    var mMinAngle = 0f
+    var mMaxAngle = 0f
+    private var mRotationStyle = "random" // position or random
 
     init {
         context.obtainStyledAttributes(attrs, R.styleable.ViewDistributor, 0, 0).apply {
             try {
-//                getString(R.styleable.SuffixEditText_suffix)?.let { mSuffix = it }
+                getFloat(R.styleable.ViewDistributor_scale, 1f).let { mScale = it }
+                getFloat(R.styleable.ViewDistributor_minAngle, 0f).let { mMinAngle = it }
+                getFloat(R.styleable.ViewDistributor_maxAngle, 0f).let { mMaxAngle = it }
+                getInt(R.styleable.ViewDistributor_iterations, 200).let { mIterations = it }
+                getString(R.styleable.ViewDistributor_rotationStyle)?.let { mRotationStyle = it }
 
             } finally {
                 recycle()
@@ -66,7 +47,7 @@ class ViewDistributor @JvmOverloads constructor(
 
     override fun onSizeChanged(width: Int, height: Int, oldWidth: Int, oldHeight: Int) {
         super.onSizeChanged(width, height, oldWidth, oldHeight)
-        updateDrawRegions(width, height, mPadding)
+        updateDrawRegions(width, height, mScale)
     }
 
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) { // TODO: Animate by redrawing?
@@ -80,12 +61,13 @@ class ViewDistributor @JvmOverloads constructor(
                 val bestCandidate = centerToLeftTop(it, view.measuredWidth, view.measuredHeight)
                 mPlacedPoints.add(bestCandidate)
 
-                mMinAngle = -15 // TODO: Attributes
-                mMaxAngle = 15
+                val rotation = if (mRotationStyle == "position") {
+                    scale(bestCandidate.x, l.toFloat(), r.toFloat(), mMinAngle, mMaxAngle)
+                } else {
+                    randomFloat(mMinAngle, mMaxAngle)
+                }
 
-                val rotation = scale(bestCandidate.x, l.toFloat(), r.toFloat(), mMinAngle.toFloat(), mMaxAngle.toFloat()) // TODO: This is angling by x position
-
-                view.measure(width, height)
+                view.measure(width, height) // Sets measured width and height
 
                 setChildFrame(
                     view,
@@ -114,7 +96,7 @@ class ViewDistributor @JvmOverloads constructor(
         ys.add(paddedDrawArea.top)
         ys.add(paddedDrawArea.bottom)
 
-        for (avoid in mAvoids) {
+        for (avoid in mAvoidRegions) {
             xs.add(avoid.left)
             xs.add(avoid.right)
             ys.add(avoid.top)
@@ -138,7 +120,7 @@ class ViewDistributor @JvmOverloads constructor(
         val iterator = mDrawRegions.iterator()
         while (iterator.hasNext()) {
             val next = iterator.next()
-            for (avoid in mAvoids) {
+            for (avoid in mAvoidRegions) {
                 if (RectF.intersects(next, avoid)) iterator.remove()
             }
         }
@@ -164,7 +146,7 @@ class ViewDistributor @JvmOverloads constructor(
         var bestCandidate: PointF? = null
         var bestDistance = 0f
 
-        for (i in 0 until mMaxRetries) {
+        for (i in 0 until mIterations) {
 
             val candidate = randomPoint()
             val closest = findClosest(candidate)
@@ -180,7 +162,7 @@ class ViewDistributor @JvmOverloads constructor(
     }
 
     private fun randomPoint(): PointF {
-        val region = mDrawRegions[randomInt(0, mDrawRegions.size - 1)]
+        val region = mDrawRegions[randomInt(0, mDrawRegions.size)]
         val x = randomFloat(region.left, region.right)
         val y = randomFloat(region.top, region.bottom)
         return PointF(x, y)
@@ -217,33 +199,18 @@ class ViewDistributor @JvmOverloads constructor(
         return PointF(left, top)
     }
 
+    /**
+     * Generates a random float within [min, max)
+     */
     private fun randomFloat(min: Float, max: Float): Float {
         return mRandom.nextFloat() * (max - min) + min
     }
 
     /**
-     * Generates a random integer between min and max, inclusive
+     * Generates a random integer within [min, max)
      */
     private fun randomInt(min: Int, max: Int): Int {
-        return mRandom.nextInt(max - min + 1) + min
-    }
-
-    private fun scale(rect: RectF, factor: Float): RectF {
-
-        var factor = factor
-        factor -= 1f
-
-        val diffHorizontal = rect.width() * factor
-        val diffVertical = rect.height() * factor
-
-        return RectF(
-            rect.left - diffHorizontal / 2f, rect.top - diffVertical / 2f,
-            rect.right + diffHorizontal / 2f, rect.bottom + diffVertical / 2f
-        )
-    }
-
-    private fun scale(rect: Rect, factor: Float): RectF {
-        return scale(RectF(rect), factor)
+        return mRandom.nextInt(max - min) + min
     }
 
     /**
@@ -267,48 +234,28 @@ class ViewDistributor @JvmOverloads constructor(
         return (newMax - newMin) * (value - oldMin) / (oldMax - oldMin) + newMin
     }
 
-    private fun calculateRectangle(view: View): RectF {
-        val location = FloatArray(2)
-        location[0] = view.x
-        location[1] = view.y
-        return RectF(location[0], location[1], location[0] + view.width, location[1] + view.height)
+    fun addAvoidRegion(rectF: RectF) {
+        mAvoidRegions.add(rectF)
     }
 
-    /*
-    var suffix: String
-        get() = mSuffix
-        set(suffix) {
-            mSuffix = suffix
-            invalidate()
+    fun removeAvoidRegion(rectF: RectF) {
+        mAvoidRegions.remove(rectF)
+    }
+
+    companion object {
+
+        private fun scale(rect: RectF, factor: Float): RectF {
+            val diffHorizontal = rect.width() * (factor - 1)
+            val diffVertical = rect.height() * (factor - 1)
+
+            return RectF(
+                rect.left - diffHorizontal / 2f, rect.top - diffVertical / 2f,
+                rect.right + diffHorizontal / 2f, rect.bottom + diffVertical / 2f
+            )
         }
-     */
 
-    fun setPadding() {
-        // TODO
-    }
-
-    fun avoidPadding(avoidPadding: Float) {
-        val paddedAvoids: MutableList<RectF> = ArrayList()
-        for (avoid in mAvoids) {
-            paddedAvoids.add(scale(avoid, avoidPadding))
+        private fun scale(rect: Rect, factor: Float): RectF {
+            return scale(RectF(rect), factor)
         }
-        mAvoids = paddedAvoids
     }
-
-    fun minAngle(minAngle: Int) {
-        mMinAngle = minAngle
-    }
-
-    fun maxAngle(maxAngle: Int) {
-        mMaxAngle = maxAngle
-    }
-
-    fun avoid(view: View?) {
-        if (view != null) mAvoids.add(calculateRectangle(view))
-    }
-
-    fun avoid(rectF: RectF?) {
-        if (rectF != null) mAvoids.add(rectF)
-    }
-
 }
