@@ -21,8 +21,7 @@ class ViewDistributor @JvmOverloads constructor(
 
     private val mDrawRegions = mutableListOf<RectF>()
     private var mAvoidRegions = mutableListOf<RectF>()
-
-    private val mPlacedPoints = mutableListOf<PointF>()
+    private val mOccupiedRegions = mutableListOf<RectF>()
 
     var iterations = 200
     var scale = 1f
@@ -42,6 +41,9 @@ class ViewDistributor @JvmOverloads constructor(
                 getInt(R.styleable.ViewDistributor_iterations, 200).let { iterations = it }
                 getString(R.styleable.ViewDistributor_rotationStyle)?.let { mRotationStyle = it }
 
+                // TODO: Bleed attribute (just use draw area scaling)
+                // TODO: Right now the position is determined by the top-left corner, so the bottom-right corner is bleeding out of ViewGroup
+
             } finally {
                 recycle()
             }
@@ -53,45 +55,45 @@ class ViewDistributor @JvmOverloads constructor(
         updateDrawRegions(width, height, scale)
     }
 
-    override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) { // TODO: Animate by redrawing?
+    override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
         mLayoutLeft = l
         mLayoutRight = r
         shuffle()
     }
 
     fun shuffle() {
-        mPlacedPoints.clear()
+        mOccupiedRegions.clear()
 
         for (i in 0 until childCount) {
             val view = getChildAt(i)
 
-            bestCandidate()?.let {
-                val bestCandidate = centerToLeftTop(it, view.measuredWidth, view.measuredHeight)
-                mPlacedPoints.add(bestCandidate)
+            var width = view.layoutParams.width
+            var height = view.layoutParams.height
+
+            view.measure(width, height)
+
+            if (width < 0) {
+                width = view.measuredWidth
+            }
+
+            if (height < 0) {
+                height = view.measuredHeight
+            }
+
+            bestCandidate(width, height)?.let {
+                val bestRect = RectF(it.x, it.y, it.x + width, it.y + height)
+                mOccupiedRegions.add(bestRect)
 
                 val rotation = if (mRotationStyle == "position") {
-                    scale(bestCandidate.x, mLayoutLeft.toFloat(), mLayoutRight.toFloat(), minAngle, maxAngle)
+                    scale(it.x, mLayoutLeft.toFloat(), mLayoutRight.toFloat(), minAngle, maxAngle)
                 } else {
                     randomFloat(minAngle, maxAngle)
                 }
 
-                var height = view.layoutParams.height
-                var width = view.layoutParams.width
-
-                view.measure(width, height)
-
-                if (height < 0) {
-                    height = view.measuredHeight
-                }
-
-                if (width < 0) {
-                    width = view.measuredWidth
-                }
-
                 setChildFrame(
                     view,
-                    bestCandidate.x.toInt(),
-                    bestCandidate.y.toInt(),
+                    it.x.toInt(),
+                    it.y.toInt(),
                     width,
                     height,
                     rotation
@@ -157,19 +159,23 @@ class ViewDistributor @JvmOverloads constructor(
         child.rotation = rotation
     }
 
-    private fun bestCandidate(): PointF? {
+    private fun bestCandidate(width: Int, height: Int): PointF? {
 
-        if (mPlacedPoints.isEmpty())
-            return randomPoint()
+        if (mOccupiedRegions.isEmpty()) {
+            val region = mDrawRegions[randomInt(0, mDrawRegions.size)]
+            return randomRectPoint(region)
+        }
 
         var bestCandidate: PointF? = null
         var bestDistance = 0f
 
         for (i in 0 until iterations) {
 
-            val candidate = randomPoint()
-            val closest = findClosest(candidate)
-            val distance = distance(candidate, closest!!)
+            val region = mDrawRegions[randomInt(0, mDrawRegions.size)]
+            val candidate = randomRectPoint(region)
+            val candidateRect = pointToRect(candidate, width.toFloat(), height.toFloat())
+            val closest = findClosest(candidateRect)
+            val distance = distance(candidateRect, closest!!)
 
             if (distance > bestDistance) {
                 bestCandidate = candidate
@@ -180,29 +186,32 @@ class ViewDistributor @JvmOverloads constructor(
         return bestCandidate
     }
 
-    private fun randomPoint(): PointF {
-        val region = mDrawRegions[randomInt(0, mDrawRegions.size)]
-        val x = randomFloat(region.left, region.right)
-        val y = randomFloat(region.top, region.bottom)
+    private fun randomRectPoint(rect: RectF): PointF {
+        val x = randomFloat(rect.left, rect.right)
+        val y = randomFloat(rect.top, rect.bottom)
         return PointF(x, y)
     }
 
-    private fun findClosest(point: PointF): PointF? {
+    private fun findClosest(rect: RectF): RectF? {
 
-        var closest: PointF? = null
+        var closest: RectF? = null
         var closestDistance = Float.MAX_VALUE
 
-        for (rectangle in mPlacedPoints) {
+        for (otherRect in mOccupiedRegions) {
 
-            val distance = distance(point, rectangle)
+            val distance = distance(rect, otherRect)
 
             if (distance < closestDistance) {
-                closest = rectangle
+                closest = otherRect
                 closestDistance = distance
             }
         }
 
         return closest
+    }
+
+    private fun pointToRect(a: PointF, width: Float, height: Float): RectF {
+        return RectF(a.x, a.y, a.x + width, a.y + height)
     }
 
     private fun distance(a: PointF, b: PointF): Float {
@@ -211,10 +220,48 @@ class ViewDistributor @JvmOverloads constructor(
         return dx * dx + dy * dy // Sqrt omitted, monotonic function
     }
 
-    private fun centerToLeftTop(point: PointF, width: Int, height: Int): PointF {
-        val left = point.x - width / 2f
-        val top = point.y - height / 2f
-        return PointF(left, top)
+    private fun distance(a: RectF, b: RectF): Float {
+
+        val left = b.right < a.left
+        val right = a.right < b.left
+        val bottom = b.bottom < a.top
+        val top = a.bottom < b.top
+
+        if (top && left) {
+            val aLeftBottom = PointF(a.left, a.bottom)
+            val bRightTop = PointF(b.right, b.top)
+            return distance(aLeftBottom, bRightTop)
+
+        } else if (left && bottom) {
+            val aLeftTop = PointF(a.left, a.top)
+            val bRightBottom = PointF(b.right, b.bottom)
+            return distance(aLeftTop, bRightBottom)
+
+        } else if (bottom && right) {
+            val aRightTop = PointF(a.right, a.top)
+            val bLeftBottom = PointF(b.left, b.bottom)
+            return distance(aRightTop, bLeftBottom)
+
+        } else if (right && top) {
+            val aRightBottom = PointF(a.right, a.bottom)
+            val bLeftTop = PointF(b.left, b.top)
+            return distance(aRightBottom, bLeftTop)
+
+        } else if (left) {
+            return a.left - b.right
+
+        } else if (right) {
+            return b.left - a.right
+
+        } else if (bottom) {
+            return a.top - b.bottom
+
+        } else if (top) {
+            return b.top - a.bottom
+
+        } else {
+            return 0f
+        }
     }
 
     /**
