@@ -18,9 +18,6 @@ class MainActivity : AppCompatActivity() {
         val shuffleButton = findViewById<Button>(R.id.shuffleButton)
         val animateButton = findViewById<Button>(R.id.animateButton)
 
-        val shuffleButtonRegion = ViewDistributor.viewToRegion(shuffleButton)
-        viewDistributor.addAvoidRegion(shuffleButtonRegion)
-
         shuffleButton.setOnClickListener {
             viewDistributor.shuffle()
         }

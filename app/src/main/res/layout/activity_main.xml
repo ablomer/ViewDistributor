@@ -11,10 +11,10 @@
         android:id="@+id/viewDistributor"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:drawAreaScale="0.85"
-        app:minAngle="-45"
-        app:maxAngle="45"
-        app:rotationStyle="random"
+        app:drawAreaScale="1.1"
+        app:minAngle="-30"
+        app:maxAngle="30"
+        app:rotationStyle="position"
         app:iterations="200">
 
         <ImageView
